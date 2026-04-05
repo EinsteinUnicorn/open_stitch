@@ -24,6 +24,7 @@ interface AppState {
   threads: ThreadInfo[];
   scaleFactor: number;
   viewport: ViewportState;
+  viewMode: "design" | "stitch";
 }
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -44,89 +45,116 @@ const state: AppState = {
     offsetX: 80,
     offsetY: 80,
   },
+  viewMode: "design",
 };
 
 app.innerHTML = `
   <div class="app-shell">
     <aside class="panel">
-      <div class="title">
-        <h1>Embroidery Digitizer</h1>
-        <p>Minimal SVG-to-stitch MVP with fill, satin, run, DST export, and PES export via Python.</p>
+      <header class="brand-header">
+        <h1 class="brand-wordmark"><span class="word-open">Open</span> <span class="word-stitch">Stitch</span></h1>
+        <p class="brand-tagline">Design to stitch in seconds</p>
+      </header>
+      
+      <div class="panel-content">
+        <!-- 1. Import Phase -->
+        <section class="phase-section">
+          <h2 class="phase-header">1. Import</h2>
+          <div id="drop-zone" class="drop-zone">
+            <div class="drop-zone-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <strong>Click or drag SVG files here</strong>
+            <p class="hint" style="margin: 4px 0 0;">Supports standard vector paths.</p>
+            <input id="svg-upload" type="file" accept=".svg,image/svg+xml" multiple />
+          </div>
+          <button id="load-sample" class="secondary" style="width:100%">Load Sample Pattern</button>
+          <div id="design-list"></div>
+        </section>
+
+        <!-- 2. Configure Phase -->
+        <section class="phase-section">
+          <h2 class="phase-header">2. Configure</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Bulk apply type:</span>
+            <select id="bulk-stitch-type" style="width: auto; padding: 6px 12px; font-size: 13px;">
+              <option value="">-- select --</option>
+              <option value="fill">Fill</option>
+              <option value="satin">Satin</option>
+              <option value="run">Run</option>
+            </select>
+          </div>
+          <div id="region-list"></div>
+        </section>
+
+        <!-- 3. Preview Stats -->
+        <section class="phase-section">
+          <h2 class="phase-header">3. Preview Stats</h2>
+          <div class="stats-strip">
+            <div class="stat-item">
+              <strong id="stat-stitches">0</strong>
+              <span class="meta">Stitches</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stat-item">
+              <strong id="stat-colors">0</strong>
+              <span class="meta">Threads</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stat-item">
+              <strong><span id="stat-width">0</span> × <span id="stat-height">0</span></strong>
+              <span class="meta">Size (mm)</span>
+            </div>
+          </div>
+          <div class="size-config">
+            <label>
+              <div class="label-header"><span>Target Width</span></div>
+              <input id="size-width" type="number" min="1" step="1" placeholder="mm" />
+            </label>
+            <label>
+              <div class="label-header"><span>Target Height</span></div>
+              <input id="size-height" type="number" min="1" step="1" placeholder="mm" />
+            </label>
+          </div>
+        </section>
+
+        <!-- 4. Export Phase -->
+        <section class="phase-section" style="margin-top:auto">
+          <h2 class="phase-header">4. Export</h2>
+          <div class="export-card">
+            <div class="export-actions">
+              <button id="export-pes" class="primary">Export PES</button>
+              <button id="export-dst" class="secondary">Export DST</button>
+            </div>
+            <p class="hint" style="text-align:center; margin:0">PES export uses local Python backend.</p>
+          </div>
+        </section>
       </div>
-
-      <section class="toolbar">
-        <h2>SVG Import</h2>
-        <label>
-          Load SVG
-          <input id="svg-upload" type="file" accept=".svg,image/svg+xml" multiple />
-        </label>
-        <div class="toolbar-actions">
-          <button id="load-sample" class="secondary">Load Sample</button>
-          <button id="rebuild">Rebuild Stitches</button>
-        </div>
-      </section>
-
-      <section class="toolbar">
-        <h2>Imported Files</h2>
-        <p class="hint">Each imported file can be removed without affecting the others.</p>
-        <div id="design-list"></div>
-      </section>
-
-      <section class="stats">
-        <h2>Pattern Stats</h2>
-        <div class="stats-grid">
-          <div><span class="meta">Regions</span><strong id="stat-regions">0</strong></div>
-          <div><span class="meta">Stitches</span><strong id="stat-stitches">0</strong></div>
-          <div><span class="meta">Color Stops</span><strong id="stat-colors">0</strong></div>
-          <div><span class="meta">Commands</span><strong id="stat-commands">0</strong></div>
-        </div>
-      </section>
-
-      <section class="toolbar">
-        <h2>Design Size</h2>
-        <div class="stats-grid">
-          <div><span class="meta">Width</span><strong id="stat-width">0 mm</strong></div>
-          <div><span class="meta">Height</span><strong id="stat-height">0 mm</strong></div>
-          <div><span class="meta">Scale</span><strong id="stat-scale">100%</strong></div>
-          <div><span class="meta">Inches</span><strong id="stat-inches">0 × 0</strong></div>
-        </div>
-        <label>
-          Target width (mm)
-          <input id="size-width" type="number" min="1" step="1" />
-        </label>
-        <label>
-          Target height (mm)
-          <input id="size-height" type="number" min="1" step="1" />
-        </label>
-        <p class="hint">Resizing is uniform to preserve the patch proportions and stitch layout.</p>
-      </section>
-
-      <section>
-        <h2>Regions</h2>
-        <p class="hint">Click a patch in the canvas or select a region here to adjust stitch direction and density.</p>
-        <div id="region-list"></div>
-      </section>
-
-      <section class="toolbar">
-        <h2>Export</h2>
-        <div class="export-actions">
-          <button id="export-dst">Export DST</button>
-          <button id="export-pes" class="secondary">Export PES</button>
-        </div>
-        <p class="hint">PES export uses the backend endpoint at <code>${PES_EXPORT_URL}</code>.</p>
-      </section>
     </aside>
 
-    <section class="canvas-panel">
-      <div class="canvas-overlay">
-        <button id="zoom-in">+</button>
-        <button id="zoom-out">-</button>
-        <button id="reset-view">Reset View</button>
+    <main class="canvas-panel">
+      <div class="canvas-toolbar">
+        <div class="toggle-group">
+          <button id="view-design" class="toggle-btn active">Design View</button>
+          <button id="view-stitch" class="toggle-btn">Stitch View</button>
+        </div>
+        <div style="display:flex; gap: 8px;">
+          <button id="rebuild" class="icon-btn" title="Refresh/Rebuild">
+             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+          <div class="zoom-controls">
+            <button id="zoom-in" class="zoom-btn">+</button>
+            <button id="reset-view" class="zoom-btn" title="Reset View">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            </button>
+            <button id="zoom-out" class="zoom-btn">-</button>
+          </div>
+        </div>
       </div>
       <div class="canvas-wrap">
         <canvas id="preview"></canvas>
       </div>
-    </section>
+    </main>
   </div>
 `;
 
@@ -134,19 +162,19 @@ const regionList = document.querySelector<HTMLDivElement>("#region-list")!;
 const designList = document.querySelector<HTMLDivElement>("#design-list")!;
 const canvas = document.querySelector<HTMLCanvasElement>("#preview")!;
 const upload = document.querySelector<HTMLInputElement>("#svg-upload")!;
+const dropZone = document.querySelector<HTMLDivElement>("#drop-zone")!;
 const loadSampleButton = document.querySelector<HTMLButtonElement>("#load-sample")!;
 const rebuildButton = document.querySelector<HTMLButtonElement>("#rebuild")!;
 const exportDstButton = document.querySelector<HTMLButtonElement>("#export-dst")!;
 const exportPesButton = document.querySelector<HTMLButtonElement>("#export-pes")!;
+const bulkStitchTypeSelect = document.querySelector<HTMLSelectElement>("#bulk-stitch-type")!;
+const viewDesignBtn = document.querySelector<HTMLButtonElement>("#view-design")!;
+const viewStitchBtn = document.querySelector<HTMLButtonElement>("#view-stitch")!;
 
-const statRegions = document.querySelector<HTMLElement>("#stat-regions")!;
 const statStitches = document.querySelector<HTMLElement>("#stat-stitches")!;
 const statColors = document.querySelector<HTMLElement>("#stat-colors")!;
-const statCommands = document.querySelector<HTMLElement>("#stat-commands")!;
 const statWidth = document.querySelector<HTMLElement>("#stat-width")!;
 const statHeight = document.querySelector<HTMLElement>("#stat-height")!;
-const statScale = document.querySelector<HTMLElement>("#stat-scale")!;
-const statInches = document.querySelector<HTMLElement>("#stat-inches")!;
 const sizeWidthInput = document.querySelector<HTMLInputElement>("#size-width")!;
 const sizeHeightInput = document.querySelector<HTMLInputElement>("#size-height")!;
 
@@ -299,19 +327,15 @@ function resizeCanvas() {
   if (context) {
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
-  draw();
+  zoomToFit();
 }
 
 function refreshStats() {
   const bounds = designBounds(state.regions);
-  statRegions.textContent = String(state.regions.length);
-  statStitches.textContent = String(state.stitches.filter((stitch) => stitch.cmd === "stitch").length);
+  statStitches.textContent = String(state.stitches.filter((stitch) => stitch.cmd === "stitch").length.toLocaleString());
   statColors.textContent = String(state.threads.length);
-  statCommands.textContent = String(state.stitches.length);
-  statWidth.textContent = `${bounds.width.toFixed(1)} mm`;
-  statHeight.textContent = `${bounds.height.toFixed(1)} mm`;
-  statScale.textContent = `${Math.round(state.scaleFactor * 100)}%`;
-  statInches.textContent = `${(bounds.width / 25.4).toFixed(2)} × ${(bounds.height / 25.4).toFixed(2)}`;
+  statWidth.textContent = bounds.width.toFixed(1);
+  statHeight.textContent = bounds.height.toFixed(1);
   sizeWidthInput.value = bounds.width > 0 ? bounds.width.toFixed(1) : "";
   sizeHeightInput.value = bounds.height > 0 ? bounds.height.toFixed(1) : "";
 }
@@ -325,7 +349,7 @@ function rebuild() {
 }
 
 function draw() {
-  renderPreview(canvas, state.regions, state.stitches, state.threads, state.selectedRegionId, state.viewport);
+  renderPreview(canvas, state.regions, state.stitches, state.threads, state.selectedRegionId, state.viewport, state.viewMode);
 }
 
 function renderRegionControls() {
@@ -339,47 +363,51 @@ function renderRegionControls() {
     card.dataset.regionId = region.id;
     card.innerHTML = `
       <div class="region-header">
-        <div>
-          <h3>${region.name}</h3>
-          <span class="badge">${region.closed ? "Closed" : "Open"} ${region.sourceType}</span>
+        <div class="region-title">
+          <div class="swatch" style="background:${region.color}"></div>
+          <div>
+            <h3>${region.name}</h3>
+            ${region.designName ? `<div class="meta">${region.designName}</div>` : ""}
+          </div>
         </div>
-        <span class="swatch" style="background:${region.color}"></span>
+        <span class="badge">${region.closed ? "Path" : "Polyl."}</span>
       </div>
-      ${region.designName ? `<p class="meta">${region.designName}</p>` : ""}
-      <label>
-        Stitch type
-        <select data-field="stitchType">
-          <option value="fill" ${region.stitchType === "fill" ? "selected" : ""}>Fill</option>
-          <option value="satin" ${region.stitchType === "satin" ? "selected" : ""}>Satin</option>
-          <option value="run" ${region.stitchType === "run" ? "selected" : ""}>Run</option>
-        </select>
-      </label>
-      ${isFill || isSatin ? `
-      <label>
-        Spacing (${region.params.spacing.toFixed(1)} mm)
-        <input data-field="spacing" type="range" min="0.3" max="3" step="0.1" value="${region.params.spacing}" />
-      </label>
-      <label>
-        Angle (${region.params.angle.toFixed(0)}°)
-        <input data-field="angle" type="range" min="0" max="180" step="5" value="${region.params.angle}" />
-      </label>
-      ` : ""}
-      ${isSatin ? `
-      <label>
-        Satin width (${region.params.satinWidth.toFixed(1)} mm)
-        <input data-field="satinWidth" type="range" min="0.8" max="10" step="0.2" value="${region.params.satinWidth}" />
-      </label>
-      <label>
-        Max satin width (${region.params.maxSatinWidth.toFixed(1)} mm)
-        <input data-field="maxSatinWidth" type="range" min="1" max="20" step="0.5" value="${region.params.maxSatinWidth}" />
-      </label>
-      ` : ""}
-      ${isRun ? `
-      <label>
-        Run thickness (${region.params.runWidth.toFixed(1)} mm)
-        <input data-field="runWidth" type="range" min="0.4" max="4" step="0.2" value="${region.params.runWidth}" />
-      </label>
-      ` : ""}
+      <div class="region-params">
+        <label>
+          <div class="label-header"><span>Stitch type</span></div>
+          <select data-field="stitchType">
+            <option value="fill" ${region.stitchType === "fill" ? "selected" : ""}>Fill</option>
+            <option value="satin" ${region.stitchType === "satin" ? "selected" : ""}>Satin</option>
+            <option value="run" ${region.stitchType === "run" ? "selected" : ""}>Run</option>
+          </select>
+        </label>
+        ${isFill || isSatin ? `
+        <label>
+          <div class="label-header"><span>Spacing</span> <span class="label-value">${region.params.spacing.toFixed(1)} mm</span></div>
+          <input data-field="spacing" type="range" min="0.3" max="3" step="0.1" value="${region.params.spacing}" />
+        </label>
+        <label>
+          <div class="label-header"><span>Angle</span> <span class="label-value">${region.params.angle.toFixed(0)}°</span></div>
+          <input data-field="angle" type="range" min="0" max="180" step="5" value="${region.params.angle}" />
+        </label>
+        ` : ""}
+        ${isSatin ? `
+        <label>
+          <div class="label-header"><span>Satin width</span> <span class="label-value">${region.params.satinWidth.toFixed(1)} mm</span></div>
+          <input data-field="satinWidth" type="range" min="0.8" max="10" step="0.2" value="${region.params.satinWidth}" />
+        </label>
+        <label>
+          <div class="label-header"><span>Max satin width</span> <span class="label-value">${region.params.maxSatinWidth.toFixed(1)} mm</span></div>
+          <input data-field="maxSatinWidth" type="range" min="1" max="20" step="0.5" value="${region.params.maxSatinWidth}" />
+        </label>
+        ` : ""}
+        ${isRun ? `
+        <label>
+          <div class="label-header"><span>Run thickness</span> <span class="label-value">${region.params.runWidth.toFixed(1)} mm</span></div>
+          <input data-field="runWidth" type="range" min="0.4" max="4" step="0.2" value="${region.params.runWidth}" />
+        </label>
+        ` : ""}
+      </div>
     `;
     card.addEventListener("click", () => {
       state.selectedRegionId = region.id;
@@ -470,6 +498,7 @@ async function loadSample() {
   const response = await fetch("/samples/flower.svg");
   const svgText = await response.text();
   addDesign("flower.svg", parseSvgDocument(svgText));
+  zoomToFit();
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -522,16 +551,49 @@ async function exportPes() {
   );
 }
 
+async function handleFileLoads(files: File[]) {
+  if (files.length === 0) return;
+  for (const file of files) {
+    if (!file.name.toLowerCase().endsWith('.svg')) continue;
+    try {
+      const svgText = await file.text();
+      addDesign(file.name, parseSvgDocument(svgText));
+    } catch (e) {
+      console.warn("Failed to load SVG", file.name, e);
+    }
+  }
+  zoomToFit();
+}
+
 upload.addEventListener("change", async () => {
   const files = Array.from(upload.files ?? []);
-  if (files.length === 0) {
-    return;
-  }
-  for (const file of files) {
-    const svgText = await file.text();
-    addDesign(file.name, parseSvgDocument(svgText));
-  }
+  await handleFileLoads(files);
   upload.value = "";
+});
+
+// Drag and drop handlers
+["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
+
+["dragenter", "dragover"].forEach(eventName => {
+  dropZone.addEventListener(eventName, () => {
+    dropZone.classList.add("drag-active");
+  });
+});
+
+["dragleave", "drop"].forEach(eventName => {
+  dropZone.addEventListener(eventName, () => {
+    dropZone.classList.remove("drag-active");
+  });
+});
+
+dropZone.addEventListener("drop", async (e) => {
+  const files = Array.from(e.dataTransfer?.files || []);
+  await handleFileLoads(files);
 });
 
 loadSampleButton.addEventListener("click", () => {
@@ -547,6 +609,31 @@ exportPesButton.addEventListener("click", () => {
   });
 });
 
+viewDesignBtn.addEventListener("click", () => {
+  state.viewMode = "design";
+  viewDesignBtn.classList.add("active");
+  viewStitchBtn.classList.remove("active");
+  draw();
+});
+
+viewStitchBtn.addEventListener("click", () => {
+  state.viewMode = "stitch";
+  viewStitchBtn.classList.add("active");
+  viewDesignBtn.classList.remove("active");
+  draw();
+});
+
+bulkStitchTypeSelect.addEventListener("change", (e) => {
+  const type = (e.currentTarget as HTMLSelectElement).value as SvgRegion["stitchType"] | "";
+  if (!type) return;
+  state.regions.forEach((region) => {
+    region.stitchType = type;
+  });
+  bulkStitchTypeSelect.value = "";
+  rebuild();
+  renderRegionControls();
+});
+
 sizeWidthInput.addEventListener("change", () => {
   resizeFromWidth(Number(sizeWidthInput.value));
 });
@@ -554,6 +641,31 @@ sizeWidthInput.addEventListener("change", () => {
 sizeHeightInput.addEventListener("change", () => {
   resizeFromHeight(Number(sizeHeightInput.value));
 });
+
+function zoomToFit() {
+  const bounds = designBounds(state.regions);
+  if (bounds.width <= 0 || bounds.height <= 0) return;
+  
+  const padding = 40;
+  const canvasBounds = canvas.getBoundingClientRect();
+  const availableWidth = canvasBounds.width - padding * 2;
+  const availableHeight = canvasBounds.height - padding * 2;
+  
+  if (availableWidth <= 0 || availableHeight <= 0) return;
+  
+  const scaleX = availableWidth / bounds.width;
+  const scaleY = availableHeight / bounds.height;
+  const newScale = Math.min(scaleX, Math.min(scaleY, 20)); // Cap max zoom
+  
+  const centerX = bounds.minX + bounds.width / 2;
+  const centerY = bounds.minY + bounds.height / 2;
+  
+  const offsetX = (canvasBounds.width / 2) - (centerX * newScale);
+  const offsetY = (canvasBounds.height / 2) - (centerY * newScale);
+  
+  state.viewport = { scale: newScale, offsetX, offsetY };
+  draw();
+}
 
 document.querySelector<HTMLButtonElement>("#zoom-in")!.addEventListener("click", () => {
   state.viewport.scale *= 1.2;
@@ -564,8 +676,7 @@ document.querySelector<HTMLButtonElement>("#zoom-out")!.addEventListener("click"
   draw();
 });
 document.querySelector<HTMLButtonElement>("#reset-view")!.addEventListener("click", () => {
-  state.viewport = { scale: 8, offsetX: 80, offsetY: 80 };
-  draw();
+  zoomToFit();
 });
 
 let isPanning = false;
