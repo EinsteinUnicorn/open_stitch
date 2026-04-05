@@ -199,6 +199,7 @@ function scaleRegions(regions: SvgRegion[], scaleFactor: number): SvgRegion[] {
     params: {
       ...region.params,
       spacing: Math.max(0.3, region.params.spacing * scaleFactor),
+      runWidth: Math.max(0.4, region.params.runWidth * scaleFactor),
       satinWidth: Math.max(0.8, region.params.satinWidth * scaleFactor),
     },
   }));
@@ -330,6 +331,9 @@ function draw() {
 function renderRegionControls() {
   regionList.innerHTML = "";
   for (const region of state.regions) {
+    const isFill = region.stitchType === "fill";
+    const isSatin = region.stitchType === "satin";
+    const isRun = region.stitchType === "run";
     const card = document.createElement("div");
     card.className = `region-card${region.id === state.selectedRegionId ? " selected" : ""}`;
     card.dataset.regionId = region.id;
@@ -350,6 +354,7 @@ function renderRegionControls() {
           <option value="run" ${region.stitchType === "run" ? "selected" : ""}>Run</option>
         </select>
       </label>
+      ${isFill || isSatin ? `
       <label>
         Spacing (${region.params.spacing.toFixed(1)} mm)
         <input data-field="spacing" type="range" min="0.3" max="3" step="0.1" value="${region.params.spacing}" />
@@ -358,6 +363,8 @@ function renderRegionControls() {
         Angle (${region.params.angle.toFixed(0)}°)
         <input data-field="angle" type="range" min="0" max="180" step="5" value="${region.params.angle}" />
       </label>
+      ` : ""}
+      ${isSatin ? `
       <label>
         Satin width (${region.params.satinWidth.toFixed(1)} mm)
         <input data-field="satinWidth" type="range" min="0.8" max="10" step="0.2" value="${region.params.satinWidth}" />
@@ -366,6 +373,13 @@ function renderRegionControls() {
         Max satin width (${region.params.maxSatinWidth.toFixed(1)} mm)
         <input data-field="maxSatinWidth" type="range" min="1" max="20" step="0.5" value="${region.params.maxSatinWidth}" />
       </label>
+      ` : ""}
+      ${isRun ? `
+      <label>
+        Run thickness (${region.params.runWidth.toFixed(1)} mm)
+        <input data-field="runWidth" type="range" min="0.4" max="4" step="0.2" value="${region.params.runWidth}" />
+      </label>
+      ` : ""}
     `;
     card.addEventListener("click", () => {
       state.selectedRegionId = region.id;
@@ -379,23 +393,28 @@ function renderRegionControls() {
       rebuild();
       renderRegionControls();
     });
-    card.querySelector<HTMLInputElement>('input[data-field="spacing"]')!.addEventListener("input", (event) => {
+    card.querySelector<HTMLInputElement>('input[data-field="spacing"]')?.addEventListener("input", (event) => {
       region.params.spacing = Number((event.currentTarget as HTMLInputElement).value);
       rebuild();
       renderRegionControls();
     });
-    card.querySelector<HTMLInputElement>('input[data-field="angle"]')!.addEventListener("input", (event) => {
+    card.querySelector<HTMLInputElement>('input[data-field="angle"]')?.addEventListener("input", (event) => {
       region.params.angle = Number((event.currentTarget as HTMLInputElement).value);
       rebuild();
       renderRegionControls();
     });
-    card.querySelector<HTMLInputElement>('input[data-field="satinWidth"]')!.addEventListener("input", (event) => {
+    card.querySelector<HTMLInputElement>('input[data-field="satinWidth"]')?.addEventListener("input", (event) => {
       region.params.satinWidth = Number((event.currentTarget as HTMLInputElement).value);
       rebuild();
       renderRegionControls();
     });
-    card.querySelector<HTMLInputElement>('input[data-field="maxSatinWidth"]')!.addEventListener("input", (event) => {
+    card.querySelector<HTMLInputElement>('input[data-field="maxSatinWidth"]')?.addEventListener("input", (event) => {
       region.params.maxSatinWidth = Number((event.currentTarget as HTMLInputElement).value);
+      rebuild();
+      renderRegionControls();
+    });
+    card.querySelector<HTMLInputElement>('input[data-field="runWidth"]')?.addEventListener("input", (event) => {
+      region.params.runWidth = Number((event.currentTarget as HTMLInputElement).value);
       rebuild();
       renderRegionControls();
     });

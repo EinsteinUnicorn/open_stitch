@@ -145,6 +145,7 @@ export function parseSvgDocument(svgText: string): SvgRegion[] {
       params: {
         spacing: 0.8,
         angle: 45,
+        runWidth: 1.2,
         satinWidth: 3,
         maxSatinWidth: 8,
       },

@@ -17,6 +17,7 @@ export interface Point {
 export interface RegionParams {
   spacing: number;
   angle: number;
+  runWidth: number;
   satinWidth: number;
   maxSatinWidth: number;
 }

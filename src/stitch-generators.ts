@@ -2,10 +2,8 @@ import {
   centroid,
   contoursBounds,
   distance,
-  pointInPolygon,
   pointInContours,
   polylineLength,
-  principalAxisAngle,
   rotatePoints,
   sampleSegment,
   samplePolyline,
@@ -36,22 +34,64 @@ export function generateRunStitches(points: Point[], spacing: number, color: num
   return sampled.map((point) => ({ x: point.x, y: point.y, cmd: "stitch" as const, color }));
 }
 
-function generateOutlineWalk(contour: Point[], spacing: number, color: number): StitchPoint[] {
-  return samplePolyline(contour, Math.max(spacing, 0.5), true).map((point) => ({
-    x: point.x,
-    y: point.y,
-    cmd: "stitch" as const,
-    color,
-  }));
+function repeatRunPasses(base: StitchPoint[], passes: number): StitchPoint[] {
+  if (passes <= 1 || base.length === 0) {
+    return base.slice();
+  }
+
+  const repeated: StitchPoint[] = [];
+  for (let pass = 0; pass < passes; pass += 1) {
+    const ordered = pass % 2 === 0 ? base : base.slice().reverse().map((stitch) => ({ ...stitch }));
+    if (repeated.length === 0) {
+      repeated.push(...ordered);
+      continue;
+    }
+    const first = ordered.find((stitch) => stitch.x !== undefined && stitch.y !== undefined);
+    if (first?.x !== undefined && first?.y !== undefined) {
+      repeated.push({ x: first.x, y: first.y, cmd: "jump", color: first.color });
+    }
+    repeated.push(...ordered);
+  }
+  return dedupeStitches(repeated);
+}
+
+function runPassCount(runWidth: number): number {
+  return Math.max(1, Math.min(6, Math.round(runWidth / 0.6)));
+}
+
+function generateContourRunStitches(contours: Point[][], spacing: number, runWidth: number, color: number): StitchPoint[] {
+  const closedContours = contours
+    .filter((contour) => contour.length >= 3)
+    .slice()
+    .sort((left, right) => Math.abs(polylineLength(right)) - Math.abs(polylineLength(left)));
+
+  if (closedContours.length === 0) {
+    return [];
+  }
+
+  const stitches: StitchPoint[] = [];
+  closedContours.forEach((contour, index) => {
+    const outline = samplePolyline(contour, Math.max(spacing, 0.5), true);
+    if (outline.length === 0) {
+      return;
+    }
+    if (index > 0) {
+      stitches.push({ x: outline[0].x, y: outline[0].y, cmd: "jump", color });
+    }
+    outline.forEach((point) => stitches.push({ x: point.x, y: point.y, cmd: "stitch", color }));
+  });
+
+  return dedupeStitches(stitches);
 }
 
 function generateClosedColumnSatin(
   contour: Point[],
   spacing: number,
+  angle: number,
   maxSatinWidth: number,
   color: number,
 ): StitchPoint[] | null {
-  const axisAngle = principalAxisAngle(contour);
+  const axisAngle = angle;
   const rotated = rotatePoints(contour, -axisAngle);
   const bounds = contoursBounds([rotated]);
   const step = Math.max(spacing, 0.5);
@@ -92,232 +132,6 @@ function generateClosedColumnSatin(
   return dedupeStitches(stitches);
 }
 
-function averageContours(contourA: Point[], contourB: Point[], spacing: number): Point[] {
-  const avgLength = Math.max((polylineLength(contourA) + polylineLength(contourB)) / 2, spacing * 2);
-  const step = Math.max(spacing, 0.6);
-  const sampleCount = Math.max(8, Math.round(avgLength / step));
-  const sampledA = samplePolyline(contourA, avgLength / sampleCount, true);
-  let sampledB = samplePolyline(contourB, avgLength / sampleCount, true);
-
-  if (sampledA.length === 0 || sampledB.length === 0) {
-    return [];
-  }
-
-  const reversedCandidate = sampledB.slice().reverse();
-  const forward = distance(sampledA[0], sampledB[0]);
-  const reversed = distance(sampledA[0], reversedCandidate[0]);
-  if (reversed < forward) {
-    sampledB = reversedCandidate;
-  }
-
-  const count = Math.min(sampledA.length, sampledB.length);
-  const centerline: Point[] = [];
-  for (let i = 0; i < count; i += 1) {
-    centerline.push({
-      x: (sampledA[i].x + sampledB[i].x) / 2,
-      y: (sampledA[i].y + sampledB[i].y) / 2,
-    });
-  }
-  return centerline;
-}
-
-function pointFromPolar(center: Point, radius: number, angle: number): Point {
-  return {
-    x: center.x + Math.cos(angle) * radius,
-    y: center.y + Math.sin(angle) * radius,
-  };
-}
-
-function mean(values: number[]): number {
-  return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function alternatingPairs(points: Point[], color: number): StitchPoint[] {
-  const stitches: StitchPoint[] = [];
-  points.forEach((point, index) => {
-    const ordered = index % 2 === 0 ? point : point;
-    stitches.push({ x: ordered.x, y: ordered.y, cmd: "stitch", color });
-  });
-  return stitches;
-}
-
-function generatePolarRingSatin(contours: Point[][], spacing: number, color: number): StitchPoint[] | null {
-  const closedContours = contours.filter((contour) => contour.length >= 3);
-  if (closedContours.length < 6) {
-    return null;
-  }
-
-  const outer = closedContours
-    .slice()
-    .sort((left, right) => Math.abs(polylineLength(right)) - Math.abs(polylineLength(left)))[0];
-  const outerBounds = contoursBounds([outer]);
-  const center: Point = {
-    x: (outerBounds.minX + outerBounds.maxX) / 2,
-    y: (outerBounds.minY + outerBounds.maxY) / 2,
-  };
-
-  const holes = closedContours.filter((contour) => contour !== outer);
-  const holeRadii = holes.map((hole) => distance(center, centroid(hole))).sort((a, b) => a - b);
-  if (holeRadii.length < 4) {
-    return null;
-  }
-
-  const split = Math.floor(holeRadii.length / 2);
-  const innerMean = mean(holeRadii.slice(0, split));
-  const outerMean = mean(holeRadii.slice(split));
-  const toothThreshold = innerMean + (outerMean - innerMean) * 0.4;
-
-  const allPoints = outer;
-  const maxRadius = Math.max(...allPoints.map((point) => distance(center, point)));
-  const minRadius = Math.min(...allPoints.map((point) => distance(center, point)));
-  const angleStep = Math.max(spacing / Math.max(toothThreshold, 1), 0.03);
-  const radialStep = Math.max(spacing, 0.5);
-
-  const stitches: StitchPoint[] = [];
-
-  const bodyPairs: Array<{ a: Point; b: Point }> = [];
-  for (let angle = -Math.PI; angle < Math.PI; angle += angleStep) {
-    const innerPoint = pointFromPolar(center, minRadius, angle);
-    const thresholdPoint = pointFromPolar(center, toothThreshold, angle);
-    const midpoint = pointFromPolar(center, (minRadius + toothThreshold) / 2, angle);
-    if (!pointInContours(midpoint, [outer, ...holes])) {
-      continue;
-    }
-    bodyPairs.push({ a: innerPoint, b: thresholdPoint });
-  }
-
-  bodyPairs.forEach((pair, index) => {
-    const ordered = index % 2 === 0 ? [pair.a, pair.b] : [pair.b, pair.a];
-    ordered.forEach((point) => stitches.push({ x: point.x, y: point.y, cmd: "stitch", color }));
-  });
-
-  for (let radius = toothThreshold; radius <= maxRadius; radius += radialStep) {
-    const samples: Point[] = [];
-    for (let angle = -Math.PI; angle < Math.PI; angle += angleStep) {
-      const point = pointFromPolar(center, radius, angle);
-      if (pointInContours(point, [outer, ...holes])) {
-        samples.push(pointFromPolar(center, radius, angle));
-      } else if (samples.length > 1) {
-        const first = samples[0];
-        const last = samples[samples.length - 1];
-        const pair = (Math.round(radius / radialStep) + stitches.length) % 2 === 0 ? [first, last] : [last, first];
-        pair.forEach((point) => stitches.push({ x: point.x, y: point.y, cmd: "stitch", color }));
-        samples.length = 0;
-      } else {
-        samples.length = 0;
-      }
-    }
-  }
-
-  return stitches.length > 0 ? dedupeStitches(stitches) : null;
-}
-
-
-function generateFillBodyStitches(contours: Point[][], spacing: number, angle: number, color: number): StitchPoint[] {
-  const closedContours = contours.filter((contour) => contour.length >= 3);
-  if (closedContours.length === 0) {
-    return [];
-  }
-  const rotatedContours = closedContours.map((contour) => rotatePoints(contour, -angle));
-  const bounds = contoursBounds(rotatedContours);
-  const rows: Point[][][] = [];
-  const rowSpacing = Math.max(spacing, 0.3);
-  const stitchSpacing = Math.min(Math.max(spacing * 0.9, 0.45), 2);
-
-  for (let y = bounds.minY + rowSpacing / 2; y <= bounds.maxY; y += rowSpacing) {
-    const intersections = rotatedContours
-      .flatMap((contour) => scanlineIntersections(contour, y))
-      .sort((a, b) => a - b)
-      .filter((value, index, list) => index === 0 || Math.abs(value - list[index - 1]) > 0.01);
-    const rowSegments: Point[][] = [];
-    for (let i = 0; i < intersections.length - 1; i += 1) {
-      const start = intersections[i];
-      const end = intersections[i + 1];
-      if (end === undefined || end - start < 0.2) {
-        continue;
-      }
-      const mid = { x: (start + end) / 2, y };
-      if (!pointInContours(mid, rotatedContours)) {
-        continue;
-      }
-      const rotatedSegment = sampleSegment({ x: start, y }, { x: end, y }, stitchSpacing);
-      rowSegments.push(rotatePoints(rotatedSegment, angle));
-    }
-    if (rowSegments.length > 0) {
-      rows.push(rowSegments);
-    }
-  }
-
-  const stitches: StitchPoint[] = [];
-  let lastPoint: Point | null = null;
-  rows.forEach((segments, index) => {
-    const orderedSegments = index % 2 === 0 ? segments : segments.slice().reverse();
-    orderedSegments.forEach((segment) => {
-      const orderedPoints = index % 2 === 0 ? segment : segment.slice().reverse();
-      const start = orderedPoints[0];
-      if (lastPoint && distance(lastPoint, start) > stitchSpacing * 1.5) {
-        stitches.push({ x: start.x, y: start.y, cmd: "jump", color });
-      }
-      orderedPoints.forEach((point) => stitches.push({ x: point.x, y: point.y, cmd: "stitch", color }));
-      lastPoint = orderedPoints[orderedPoints.length - 1];
-    });
-  });
-  return dedupeStitches(stitches);
-}
-
-function generateClosedContourSatinStitches(
-  contours: Point[][],
-  spacing: number,
-  angle: number,
-  color: number,
-  centerOnly: boolean,
-): StitchPoint[] {
-  const sorted = contours
-    .filter((contour) => contour.length >= 3)
-    .slice()
-    .sort((left, right) => Math.abs(polylineLength(right)) - Math.abs(polylineLength(left)));
-  if (sorted.length === 0) {
-    return [];
-  }
-
-  const polarRing = generatePolarRingSatin(sorted, spacing, color);
-  if (polarRing) {
-    return polarRing;
-  }
-
-  const stitches: StitchPoint[] = [];
-  sorted.forEach((contour, index) => {
-    const walk = generateOutlineWalk(contour, spacing, color);
-    if (walk.length === 0) {
-      return;
-    }
-    if (index > 0) {
-      stitches.push({ x: walk[0].x, y: walk[0].y, cmd: "jump", color });
-    }
-    stitches.push(...walk);
-  });
-
-  if (!centerOnly && sorted.length === 2) {
-    const centerline = averageContours(sorted[0], sorted[1], spacing);
-    if (centerline.length > 0) {
-      stitches.push({ x: centerline[0].x, y: centerline[0].y, cmd: "jump", color });
-      stitches.push(...generateRunStitches(centerline, spacing, color));
-    }
-  }
-
-  if (!centerOnly && sorted.length === 2) {
-    const body = generateFillBodyStitches([sorted[0], sorted[1]], spacing, angle, color);
-    if (body.length > 0) {
-      const firstBody = body.find((stitch) => stitch.x !== undefined && stitch.y !== undefined);
-      if (firstBody?.x !== undefined && firstBody?.y !== undefined) {
-        stitches.push({ x: firstBody.x, y: firstBody.y, cmd: "jump", color });
-      }
-      stitches.push(...body);
-    }
-  }
-  return dedupeStitches(stitches);
-}
-
 export function generateSatinStitches(
   points: Point[],
   contours: Point[][],
@@ -329,14 +143,14 @@ export function generateSatinStitches(
 ): StitchPoint[] {
   const closedContours = contours.filter((contour) => contour.length >= 3);
   if (closedContours.length === 1) {
-    const columnSatin = generateClosedColumnSatin(closedContours[0], spacing, maxSatinWidth, color);
+    const columnSatin = generateClosedColumnSatin(closedContours[0], spacing, angle, maxSatinWidth, color);
     if (columnSatin) {
       return columnSatin;
     }
     return generateFillStitches(contours, spacing, angle, color);
   }
   if (closedContours.length >= 2) {
-    return generateClosedContourSatinStitches(closedContours, spacing, angle, color, false);
+    return generateFillStitches(contours, spacing, angle, color);
   }
 
   const sampled = samplePolyline(points, Math.max(spacing, 0.75));
@@ -461,36 +275,8 @@ function reverseRegionStitches(stitches: StitchPoint[]): StitchPoint[] {
     .map((stitch) => ({ ...stitch }));
 }
 
-function convertJumpsToRuns(stitches: StitchPoint[], colorIndex: number): StitchPoint[] {
-  return stitches.flatMap((stitch, index) => {
-    if (stitch.cmd !== "jump" || stitch.x === undefined || stitch.y === undefined) {
-      if (stitch.cmd === "trim") {
-        return [];
-      }
-      return [{ ...stitch }];
-    }
-
-    let previousPoint: Point | null = null;
-    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
-      const candidate = stitches[cursor];
-      if (candidate.x !== undefined && candidate.y !== undefined) {
-        previousPoint = { x: candidate.x, y: candidate.y };
-        break;
-      }
-    }
-
-    const target = { x: stitch.x, y: stitch.y };
-    if (!previousPoint) {
-      return [{ ...stitch, cmd: "stitch", color: colorIndex }];
-    }
-
-    return generateRunStitches([previousPoint, target], Math.max(distance(previousPoint, target) / 3, 0.5), colorIndex).slice(1);
-  });
-}
-
 function buildRegionBlock(region: SvgRegion, colorIndex: number): RegionBlock | null {
-  const rawStitches = generateRegionStitches(region, colorIndex);
-  const stitches = isRedLike(region.color) ? convertJumpsToRuns(rawStitches, colorIndex) : rawStitches;
+  const stitches = generateRegionStitches(region, colorIndex);
   const entry = firstCoordinate(stitches);
   const exit = lastCoordinate(stitches);
   if (!entry || !exit || stitches.length === 0) {
@@ -524,21 +310,10 @@ function orientBlock(block: RegionBlock, reverse: boolean): RegionBlock {
 }
 
 function generateRegionStitches(region: SvgRegion, colorIndex: number): StitchPoint[] {
-  const colorHex = region.color.toLowerCase();
-  const centerOnlySatin = isRedLike(colorHex);
   switch (region.stitchType as RegionKind) {
     case "fill":
       return generateFillStitches(region.contours, region.params.spacing, region.params.angle, colorIndex);
     case "satin":
-      if (region.contours.filter((contour) => contour.length >= 3).length >= 2) {
-        return generateClosedContourSatinStitches(
-          region.contours,
-          region.params.spacing,
-          region.params.angle,
-          colorIndex,
-          centerOnlySatin,
-        );
-      }
       return generateSatinStitches(
         region.points,
         region.contours,
@@ -550,7 +325,10 @@ function generateRegionStitches(region: SvgRegion, colorIndex: number): StitchPo
       );
     case "run":
     default:
-      return generateRunStitches(region.points, region.params.spacing, colorIndex);
+      if (region.closed) {
+        return generateContourRunStitches(region.contours, region.params.spacing, region.params.runWidth, colorIndex);
+      }
+      return repeatRunPasses(generateRunStitches(region.points, region.params.spacing, colorIndex), runPassCount(region.params.runWidth));
   }
 }
 
