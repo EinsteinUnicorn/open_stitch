@@ -1,0 +1,6 @@
+<svg width="100mm" height="80mm" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+  <polygon id="petal-left" points="22,35 35,10 47,35 35,55" fill="#f97316" />
+  <polygon id="petal-right" points="53,35 65,10 78,35 65,55" fill="#fb7185" />
+  <polygon id="leaf" points="40,56 50,68 35,74 25,62" fill="#0f766e" />
+  <path id="stem" d="M48 54 C50 58, 49 66, 52 75" stroke="#14532d" fill="none" />
+</svg>
