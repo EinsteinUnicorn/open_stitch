@@ -644,14 +644,20 @@ sizeHeightInput.addEventListener("change", () => {
 
 function zoomToFit() {
   const bounds = designBounds(state.regions);
-  if (bounds.width <= 0 || bounds.height <= 0) return;
+  if (bounds.width <= 0 || bounds.height <= 0 || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height)) {
+    draw(); // Still redraw so empty canvas clears properly
+    return;
+  }
   
   const padding = 40;
   const canvasBounds = canvas.getBoundingClientRect();
   const availableWidth = canvasBounds.width - padding * 2;
   const availableHeight = canvasBounds.height - padding * 2;
   
-  if (availableWidth <= 0 || availableHeight <= 0) return;
+  if (availableWidth <= 0 || availableHeight <= 0) {
+    draw();
+    return;
+  }
   
   const scaleX = availableWidth / bounds.width;
   const scaleY = availableHeight / bounds.height;
@@ -663,7 +669,7 @@ function zoomToFit() {
   const offsetX = (canvasBounds.width / 2) - (centerX * newScale);
   const offsetY = (canvasBounds.height / 2) - (centerY * newScale);
   
-  state.viewport = { scale: newScale, offsetX, offsetY };
+  state.viewport = { scale: Math.max(newScale, 0.01), offsetX, offsetY };
   draw();
 }
 
