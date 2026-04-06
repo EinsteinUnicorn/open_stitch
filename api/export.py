@@ -60,7 +60,7 @@ def build_pattern(payload: dict) -> EmbPattern:
     return pattern
 
 
-class PesHandler(BaseHTTPRequestHandler):
+class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:  # noqa: N802
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -69,7 +69,8 @@ class PesHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path.rstrip("/") != "/export/pes":
+        # Vercel routes matches the file name automatically, but we allow /api/export and /api/export.py for flexibility
+        if not self.path.rstrip("/").startswith("/api/export"):
             self.send_error(404, "Not found")
             return
 
@@ -97,6 +98,6 @@ class PesHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = HTTPServer(("0.0.0.0", 8000), PesHandler)
+    server = HTTPServer(("0.0.0.0", 8000), handler)
     print("PES exporter listening on http://localhost:8000")
     server.serve_forever()

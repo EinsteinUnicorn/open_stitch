@@ -7,8 +7,8 @@ import { renderPreview, type ViewportState } from "./renderer";
 import { parseSvgDocument } from "./svg";
 import type { Point, StitchPoint, SvgRegion, ThreadInfo } from "./types";
 
-const PES_EXPORT_URL = import.meta.env.VITE_PES_EXPORT_URL || "/export/pes";
-const PES_FALLBACK_URLS = ["http://127.0.0.1:8000/export/pes", "http://localhost:8000/export/pes"];
+const PES_EXPORT_URL = import.meta.env.VITE_PES_EXPORT_URL || "/api/export";
+const PES_FALLBACK_URLS = ["http://127.0.0.1:8000/api/export", "http://localhost:8000/api/export"];
 
 interface ImportedDesign {
   id: string;
@@ -235,7 +235,19 @@ function scaleRegions(regions: SvgRegion[], scaleFactor: number): SvgRegion[] {
 
 function applyScale(scaleFactor: number) {
   state.scaleFactor = scaleFactor;
-  state.regions = scaleRegions(cloneRegions(state.baseRegions), scaleFactor);
+  const newRegions = scaleRegions(cloneRegions(state.baseRegions), scaleFactor);
+  
+  // Preserve current customizations instead of wiping them out
+  for (let i = 0; i < newRegions.length; i++) {
+    const existing = state.regions.find(r => r.id === newRegions[i].id);
+    if (existing) {
+      newRegions[i].stitchType = existing.stitchType;
+      newRegions[i].color = existing.color;
+      newRegions[i].params = { ...existing.params };
+    }
+  }
+  
+  state.regions = newRegions;
   rebuild();
   renderDesignList();
   renderRegionControls();
