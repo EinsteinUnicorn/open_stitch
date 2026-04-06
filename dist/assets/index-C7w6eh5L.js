@@ -1,0 +1,163 @@
+(function(){const e=document.createElement("link").relList;if(e&&e.supports&&e.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))o(n);new MutationObserver(n=>{for(const i of n)if(i.type==="childList")for(const r of i.addedNodes)r.tagName==="LINK"&&r.rel==="modulepreload"&&o(r)}).observe(document,{childList:!0,subtree:!0});function s(n){const i={};return n.integrity&&(i.integrity=n.integrity),n.referrerPolicy&&(i.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?i.credentials="include":n.crossOrigin==="anonymous"?i.credentials="omit":i.credentials="same-origin",i}function o(n){if(n.ep)return;n.ep=!0;const i=s(n);fetch(n.href,i)}})();const nt=10;function A(t,e){let s=0,o=Math.round(t);const n=[1,9,27];for(let i=2;i>=0;i-=1){const r=n[i];o>=r?(s|=e[i],o-=r):o<=-r&&(s|=e[i]<<1,o+=r)}return s}function st(t,e,s){let o=0,n=0,i=3;return o|=A(t,[1,4,16]),n|=A(t,[1,4,16])>>1,o|=A(-e,[2,8,32]),n|=A(-e,[2,8,32])>>1,s==="jump"||s==="trim"?i=131:s==="color_change"?i=195:i=3,[o&255,n&255,i&255]}function T(t,e){return`${t}:${e}`.padEnd(16," ")}function It(t){let e=0,s=0,o=0,n=0,i=0,r=0,a=0,h=0;const m=[];for(const d of t){if(d.cmd==="color_change"){m.push(...st(0,0,"color_change")),n+=1;continue}if(d.x===void 0||d.y===void 0)continue;const f=Math.round(d.x*nt),y=Math.round(d.y*nt),g=f-e,x=y-s;m.push(...st(g,x,d.cmd)),e=f,s=y,o+=1,i=Math.min(i,e),r=Math.min(r,s),a=Math.max(a,e),h=Math.max(h,s)}m.push(0,0,243);const c=T("LA","MVP")+T("ST",String(o).padStart(7,"0"))+T("CO",String(Math.max(n+1,1)).padStart(3,"0"))+T("+X",String(a).padStart(5,"0"))+T("-X",String(Math.abs(i)).padStart(5,"0"))+T("+Y",String(h).padStart(5,"0"))+T("-Y",String(Math.abs(r)).padStart(5,"0"))+T("AX",String(e).padStart(6,"0"))+T("AY",String(s).padStart(6,"0"))+T("MX","000000")+T("MY","000000")+"PD:******".padEnd(16," "),l=new TextEncoder().encode(c.padEnd(512," ")),p=Uint8Array.from(m);return new Blob([l,p],{type:"application/octet-stream"})}const kt=Math.PI/180;function Wt(t,e){const s=e*kt,o=Math.cos(s),n=Math.sin(s);return{x:t.x*o-t.y*n,y:t.x*n+t.y*o}}function $(t,e){return t.map(s=>Wt(s,e))}function $t(t){let e=Number.POSITIVE_INFINITY,s=Number.POSITIVE_INFINITY,o=Number.NEGATIVE_INFINITY,n=Number.NEGATIVE_INFINITY;for(const i of t)e=Math.min(e,i.x),s=Math.min(s,i.y),o=Math.max(o,i.x),n=Math.max(n,i.y);return{minX:e,minY:s,maxX:o,maxY:n}}function tt(t){const e=t.flat();return $t(e)}function ot(t){let e=0;for(let s=1;s<t.length;s+=1)e+=C(t[s-1],t[s]);return e}function D(t,e,s=!1){if(t.length<2)return t.slice();const o=s?[...t,t[0]]:t,n=[o[0]];let i=0;for(let a=1;a<o.length;a+=1){const h=o[a-1],m=o[a],c=C(h,m);if(c===0)continue;let l=e-i;for(;l<=c;){const p=l/c;n.push({x:h.x+(m.x-h.x)*p,y:h.y+(m.y-h.y)*p}),l+=e}i=c-(l-e),i>=e&&(i=0)}const r=o[o.length-1];return!s&&(n.length===0||!ft(n[n.length-1],r))&&n.push(r),mt(n)}function Yt(t,e){const s=[];for(let o=0;o<t.length;o+=1){const n=t[o],i=t[(o+1)%t.length],r=Math.min(n.y,i.y),a=Math.max(n.y,i.y);if(n.y===i.y||e<r||e>=a)continue;const h=(e-n.y)/(i.y-n.y);s.push(n.x+(i.x-n.x)*h)}return s.sort((o,n)=>o-n)}function qt(t,e){const s=[];for(let o=0;o<t.length;o+=1){const n=t[o],i=t[(o+1)%t.length],r=Math.min(n.x,i.x),a=Math.max(n.x,i.x);if(n.x===i.x||e<r||e>=a)continue;const h=(e-n.x)/(i.x-n.x);s.push(n.y+(i.y-n.y)*h)}return s.sort((o,n)=>o-n)}function At(t,e){let s=!1;for(let o=0,n=e.length-1;o<e.length;n=o,o+=1){const i=e[o],r=e[n];i.y>t.y!=r.y>t.y&&t.x<(r.x-i.x)*(t.y-i.y)/(r.y-i.y||Number.EPSILON)+i.x&&(s=!s)}return s}function pt(t,e){return e.reduce((s,o)=>At(t,o)?!s:s,!1)}function it(t){const e=t.reduce((s,o)=>({x:s.x+o.x,y:s.y+o.y}),{x:0,y:0});return{x:e.x/t.length,y:e.y/t.length}}function C(t,e){return Math.hypot(t.x-e.x,t.y-e.y)}function zt(t,e){const s=e.x-t.x,o=e.y-t.y,n=Math.hypot(s,o)||1;return{x:-o/n,y:s/n}}function mt(t){return t.filter((e,s)=>s===0||!ft(e,t[s-1]))}function ft(t,e,s=1e-6){return Math.abs(t.x-e.x)<s&&Math.abs(t.y-e.y)<s}function Bt(t,e,s){const o=C(t,e);if(o===0)return[t];const n=[],i=Math.max(.6,s);for(let r=0;r<o;r+=i){const a=r/o;n.push({x:t.x+(e.x-t.x)*a,y:t.y+(e.y-t.y)*a})}return n.push(e),mt(n)}const Xt=2,Dt=7;function yt(t,e,s){return D(t,Math.max(e,.5)).map(n=>({x:n.x,y:n.y,cmd:"stitch",color:s}))}function Ft(t,e){if(e<=1||t.length===0)return t.slice();const s=[];for(let o=0;o<e;o+=1){const n=o%2===0?t:t.slice().reverse().map(r=>({...r}));if(s.length===0){s.push(...n);continue}const i=n.find(r=>r.x!==void 0&&r.y!==void 0);i?.x!==void 0&&i?.y!==void 0&&s.push({x:i.x,y:i.y,cmd:"jump",color:i.color}),s.push(...n)}return Y(s)}function _t(t){return Math.max(1,Math.min(6,Math.round(t/.6)))}function Ot(t,e,s,o){const n=t.filter(r=>r.length>=3).slice().sort((r,a)=>Math.abs(ot(a))-Math.abs(ot(r)));if(n.length===0)return[];const i=[];return n.forEach((r,a)=>{const h=D(r,Math.max(e,.5),!0);h.length!==0&&(a>0&&i.push({x:h[0].x,y:h[0].y,cmd:"jump",color:o}),h.forEach(m=>i.push({x:m.x,y:m.y,cmd:"stitch",color:o})))}),Y(i)}function Ht(t,e,s,o,n){const i=s,r=$(t,-i),a=tt([r]),h=Math.max(e,.5),m=[];for(let p=a.minX+h/2;p<=a.maxX;p+=h){const d=qt(r,p);if(d.length<2)continue;const f=d[0],y=d[d.length-1],g=y-f;g<.2||m.push({a:$([{x:p,y:f}],i)[0],b:$([{x:p,y}],i)[0],width:g})}if(m.length<2||m.reduce((p,d)=>p+d.width,0)/m.length>o)return null;const l=[];return m.forEach((p,d)=>{(d%2===0?[p.a,p.b]:[p.b,p.a]).forEach(y=>l.push({x:y.x,y:y.y,cmd:"stitch",color:n}))}),Y(l)}function jt(t,e,s,o,n,i,r){const a=e.filter(l=>l.length>=3);if(a.length===1){const l=Ht(a[0],s,n,r,i);return l||V(e,s,n,i)}if(a.length>=2)return V(e,s,n,i);const h=D(t,Math.max(s,.75));if(h.length<2)return[];const m=Math.max(o,.8)/2,c=[];for(let l=0;l<h.length;l+=1){const p=h[l],d=h[Math.min(l+1,h.length-1)],f=h[Math.max(l-1,0)],y=zt(f,d),g={x:p.x+y.x*m,y:p.y+y.y*m},x={x:p.x-y.x*m,y:p.y-y.y*m},b=l%2===0?[g,x]:[x,g];for(const w of b)c.push({x:w.x,y:w.y,cmd:"stitch",color:i})}return Y(c)}function V(t,e,s,o){const n=t.filter(d=>d.length>=3);if(n.length===0)return[];const i=n.map(d=>$(d,-s)),r=tt(i),a=[],h=Math.max(e,.3),m=Math.min(Math.max(e*.9,.45),2);for(let d=r.minY+h/2;d<=r.maxY;d+=h){const f=i.flatMap(g=>Yt(g,d)).sort((g,x)=>g-x).filter((g,x,b)=>x===0||Math.abs(g-b[x-1])>.01),y=[];for(let g=0;g<f.length-1;g+=1){const x=f[g],b=f[g+1];if(b===void 0||b-x<.2)continue;const w={x:(x+b)/2,y:d};if(!pt(w,i))continue;const k=Bt({x,y:d},{x:b,y:d},m);y.push($(k,s))}y.length>0&&a.push(y)}const c=[];let l=null;a.forEach((d,f)=>{(f%2===0?d:d.slice().reverse()).forEach(g=>{const x=f%2===0?g:g.slice().reverse(),b=x[0];l&&C(l,b)>m*1.5&&c.push({x:b.x,y:b.y,cmd:"jump",color:o}),x.forEach(w=>c.push({x:w.x,y:w.y,cmd:"stitch",color:o})),l=x[x.length-1]})});const p=Math.min(Math.max(e,.5),1.2);return n.forEach(d=>{const f=D(d,p,!0);if(f.length!==0){if(c.length>0){const y=f[0];c.push({x:y.x,y:y.y,cmd:"jump",color:o})}f.forEach(y=>c.push({x:y.x,y:y.y,cmd:"stitch",color:o}))}}),Y(c)}function Y(t){return t.filter((e,s)=>{if(s===0)return!0;const o=t[s-1];return e.x!==o.x||e.y!==o.y||e.cmd!==o.cmd})}function gt(t){const e=t.find(s=>s.x!==void 0&&s.y!==void 0);return e&&e.x!==void 0&&e.y!==void 0?{x:e.x,y:e.y}:null}function xt(t){for(let e=t.length-1;e>=0;e-=1){const s=t[e];if(s.x!==void 0&&s.y!==void 0)return{x:s.x,y:s.y}}return null}function Vt(t){return t.slice().reverse().map(e=>({...e}))}function Ut(t,e){const s=Zt(t,e),o=gt(s),n=xt(s);return!o||!n||s.length===0?null:{region:t,stitches:s,entry:o,exit:n,reversible:t.stitchType==="fill"}}function Gt(t,e){if(!t.reversible)return t;const s=Vt(t.stitches),o=gt(s),n=xt(s);return!o||!n?t:{...t,stitches:s,entry:o,exit:n}}function Zt(t,e){switch(t.stitchType){case"fill":return V(t.contours,t.params.spacing,t.params.angle,e);case"satin":return jt(t.points,t.contours,t.params.spacing,t.params.satinWidth,t.params.angle,e,t.params.maxSatinWidth);default:return t.closed?Ot(t.contours,t.params.spacing,t.params.runWidth,e):Ft(yt(t.points,t.params.spacing,e),_t(t.params.runWidth))}}function Jt(t){if(t.length<=1)return t.slice();const e=t.slice();let s=null;const o=[];for(;e.length>0;){let n=0,i=e[0],r=Number.POSITIVE_INFINITY;e.forEach((a,h)=>{const m=s?C(s,a.entry):it(a.region.points).x+it(a.region.points).y;if(m<r&&(r=m,n=h,i=a),a.reversible&&s){const c=Gt(a),l=C(s,c.entry);l<r&&(r=l,n=h,i=c)}}),o.push(i),s=i.exit,e.splice(n,1)}return o}function Qt(t){const e=new Map;return t.forEach(s=>{const o=s.color.toLowerCase(),n=e.get(o);if(n){n.push(s);return}e.set(o,[s])}),Array.from(e.entries()).map(([s,o])=>({color:s,regions:o}))}function Kt(t,e,s,o){if(!e){t.push({x:s.x,y:s.y,cmd:"jump",color:o});return}const n=C(e,s);if(!(n<=.01)){if(n<=Xt){yt([e,s],Math.max(n/2,.5),o).slice(1).forEach(r=>t.push(r));return}n>Dt&&t.push({x:e.x,y:e.y,cmd:"trim",color:o}),t.push({x:s.x,y:s.y,cmd:"jump",color:o})}}function te(t){const e=Qt(t),s=[],o=e.map((n,i)=>({hex:n.color,name:`Color ${i+1}`}));return e.forEach((n,i)=>{const r=Jt(n.regions.map(h=>Ut(h,i)).filter(h=>h!==null));let a=null;r.forEach((h,m)=>{h.stitches.length!==0&&(s.length>0&&m===0&&(s.push({cmd:"color_change"}),a=null),Kt(s,a,h.entry,i),s.push(...h.stitches),s.push({cmd:"trim",x:h.exit.x,y:h.exit.y,color:i}),a=h.exit)})}),{stitches:s,threads:o}}function ee(t){return t.color.startsWith("#")?t.color:"#1f6feb"}function ne(t,e,s,o,n,i,r="design"){const a=t.getContext("2d");if(!a)return;const{width:h,height:m}=t;a.clearRect(0,0,h,m),a.save(),a.translate(i.offsetX,i.offsetY),a.scale(i.scale,i.scale),a.lineCap="round",a.lineJoin="round";for(const c of e){const l=ee(c);a.strokeStyle=l,a.globalAlpha=n===c.id?1:.4,a.fillStyle=n===c.id?`${l}10`:"transparent",a.lineWidth=n===c.id?.4:.3;for(const p of c.contours)a.beginPath(),p.forEach((d,f)=>{f===0?a.moveTo(d.x,d.y):a.lineTo(d.x,d.y)}),c.closed&&(a.closePath(),n===c.id&&a.fill()),a.stroke()}a.globalAlpha=1,a.lineWidth=.25;for(let c=1;c<s.length;c+=1){const l=s[c-1],p=s[c];if(l.x===void 0||l.y===void 0||p.x===void 0||p.y===void 0||p.cmd==="color_change"||p.cmd==="jump"&&r==="design")continue;const d=typeof p.color=="number"?o[p.color]?.hex:void 0;a.strokeStyle=p.cmd==="jump"?"rgba(245, 158, 11, 0.6)":d||"#111827",a.beginPath(),a.moveTo(l.x,l.y),a.lineTo(p.x,p.y),a.stroke()}s.forEach((c,l)=>{if(c.x===void 0||c.y===void 0||r==="design"&&c.cmd==="jump")return;const p=typeof c.color=="number"?o[c.color]?.hex:void 0;a.fillStyle=c.cmd==="jump"?"#f59e0b":p||"#111827",a.beginPath(),a.arc(c.x,c.y,.35,0,Math.PI*2),a.fill(),r==="stitch"&&l%12===0&&(a.fillStyle="#b91c1c",a.font="1.4px 'JetBrains Mono', monospace",a.fillText(String(l),c.x+.5,c.y-.5))}),a.restore()}const rt={M:2,m:2,L:2,l:2,H:1,h:1,V:1,v:1,C:6,c:6,S:4,s:4,Q:4,q:4,T:2,t:2,Z:0,z:0};function P(t,e){return Math.hypot(t.x-e.x,t.y-e.y)}function v(t,e,s){return t+(e-t)*s}function at(t,e,s,o,n){const i={x:v(t.x,e.x,n),y:v(t.y,e.y,n)},r={x:v(e.x,s.x,n),y:v(e.y,s.y,n)},a={x:v(s.x,o.x,n),y:v(s.y,o.y,n)},h={x:v(i.x,r.x,n),y:v(i.y,r.y,n)},m={x:v(r.x,a.x,n),y:v(r.y,a.y,n)};return{x:v(h.x,m.x,n),y:v(h.y,m.y,n)}}function ct(t,e,s,o){const n={x:v(t.x,e.x,o),y:v(t.y,e.y,o)},i={x:v(e.x,s.x,o),y:v(e.y,s.y,o)};return{x:v(n.x,i.x,o),y:v(n.y,i.y,o)}}function z(t,e){const s=Math.max(6,Math.ceil(e/4)),o=[];for(let n=1;n<=s;n+=1)o.push(t(n/s));return o}function se(t){return t.match(/[a-zA-Z]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?/g)??[]}function oe(t){const e=se(t),s=[];let o=0,n=null;for(;o<e.length;){const i=e[o];if(/^[a-zA-Z]$/.test(i)){n=i,o+=1,rt[n]===0&&s.push({type:n,values:[]});continue}if(!n)throw new Error("Invalid SVG path data.");const r=rt[n];if(r===0)continue;const a=e.slice(o,o+r).map(Number);if(a.length<r||a.some(Number.isNaN))break;s.push({type:n,values:a}),o+=r,n==="M"?n="L":n==="m"&&(n="l")}return s}function R(t,e){const s=t[t.length-1];(!s||Math.abs(s.x-e.x)>1e-6||Math.abs(s.y-e.y)>1e-6)&&t.push(e)}function ie(t){const e=oe(t),s=[];let o=null,n={x:0,y:0},i={x:0,y:0},r=null;const a=()=>(o||(o={points:[],closed:!1},s.push(o)),o);for(const h of e){const{type:m,values:c}=h;switch(m){case"M":case"m":{const l=m==="M"?{x:c[0],y:c[1]}:{x:n.x+c[0],y:n.y+c[1]};o={points:[],closed:!1},s.push(o),R(o.points,l),n=l,i=l,r=null;break}case"L":case"l":{const l=m==="L"?{x:c[0],y:c[1]}:{x:n.x+c[0],y:n.y+c[1]};R(a().points,l),n=l,r=null;break}case"H":case"h":{const l=m==="H"?{x:c[0],y:n.y}:{x:n.x+c[0],y:n.y};R(a().points,l),n=l,r=null;break}case"V":case"v":{const l=m==="V"?{x:n.x,y:c[0]}:{x:n.x,y:n.y+c[0]};R(a().points,l),n=l,r=null;break}case"C":case"c":{const l=m==="C"?{x:c[0],y:c[1]}:{x:n.x+c[0],y:n.y+c[1]},p=m==="C"?{x:c[2],y:c[3]}:{x:n.x+c[2],y:n.y+c[3]},d=m==="C"?{x:c[4],y:c[5]}:{x:n.x+c[4],y:n.y+c[5]},f=P(n,l)+P(l,p)+P(p,d);z(y=>at(n,l,p,d,y),f).forEach(y=>R(a().points,y)),n=d,r=p;break}case"S":case"s":{const l=r?{x:n.x*2-r.x,y:n.y*2-r.y}:n,p=m==="S"?{x:c[0],y:c[1]}:{x:n.x+c[0],y:n.y+c[1]},d=m==="S"?{x:c[2],y:c[3]}:{x:n.x+c[2],y:n.y+c[3]},f=P(n,l)+P(l,p)+P(p,d);z(y=>at(n,l,p,d,y),f).forEach(y=>R(a().points,y)),n=d,r=p;break}case"Q":case"q":{const l=m==="Q"?{x:c[0],y:c[1]}:{x:n.x+c[0],y:n.y+c[1]},p=m==="Q"?{x:c[2],y:c[3]}:{x:n.x+c[2],y:n.y+c[3]},d=P(n,l)+P(l,p);z(f=>ct(n,l,p,f),d).forEach(f=>R(a().points,f)),n=p,r=l;break}case"T":case"t":{const l=r?{x:n.x*2-r.x,y:n.y*2-r.y}:{...n},p=m==="T"?{x:c[0],y:c[1]}:{x:n.x+c[0],y:n.y+c[1]},d=P(n,l)+P(l,p);z(f=>ct(n,l,p,f),d).forEach(f=>R(a().points,f)),n=p,r=l;break}case"Z":case"z":{const l=a();l.closed=!0,R(l.points,i),n=i,r=null;break}default:r=null;break}}return s.filter(h=>h.points.length>=2)}const W=25.4/96,U=[1,0,0,1,0,0];function re(t,e=0){if(!t)return e;const s=t.trim().match(/-?\d*\.?\d+/);return s?Number(s[0]):e}function lt(t){if(!t)return 0;const e=t.trim(),s=re(e,0);return e.endsWith("mm")?s:e.endsWith("cm")?s*10:e.endsWith("in")?s*25.4:s*W}function ae(t){return t.trim().split(/\s+/).map(e=>e.split(",")).filter(e=>e.length===2).map(([e,s])=>({x:parseFloat(e),y:parseFloat(s)}))}function B(t,e){return[t[0]*e[0]+t[2]*e[1],t[1]*e[0]+t[3]*e[1],t[0]*e[2]+t[2]*e[3],t[1]*e[2]+t[3]*e[3],t[0]*e[4]+t[2]*e[5]+t[4],t[1]*e[4]+t[3]*e[5]+t[5]]}function dt(t,e){return{x:t.x*e[0]+t.y*e[2]+e[4],y:t.x*e[1]+t.y*e[3]+e[5]}}function ce(t){return t?Array.from(t.matchAll(/([a-zA-Z]+)\(([^)]+)\)/g)).reduce((s,[,o,n])=>{const i=n.split(/[\s,]+/).map(r=>r.trim()).filter(Boolean).map(Number);switch(o){case"translate":return B(s,[1,0,0,1,i[0]??0,i[1]??0]);case"scale":return B(s,[i[0]??1,0,0,i[1]??i[0]??1,0,0]);case"matrix":return i.length===6?B(s,i):s;default:return s}},U):U}function le(t){let e=t,s=U;for(;e&&e.tagName!=="svg";)s=B(ce(e.getAttribute("transform")),s),e=e.parentElement;return s}function vt(t){const s=new DOMParser().parseFromString(t,"image/svg+xml"),o=s.querySelector("svg");if(!o)throw new Error("No SVG root element found.");const n=o.getAttribute("viewBox")?.split(/\s+/).map(Number),i=lt(o.getAttribute("width")),r=lt(o.getAttribute("height")),a=n?.[2]??(i>0?i/W:100),h=n?.[3]??(r>0?r/W:100),m=i>0?i/a:W,c=r>0?r/h:W,l=d=>({x:d.x*m,y:d.y*c});return Array.from(s.querySelectorAll("path, polygon, polyline")).map((d,f)=>{let y=[],g=!1;const x=le(d);if(d.tagName==="path"){const w=ie(d.getAttribute("d")??"");y=w.map(k=>k.points.map(Nt=>l(dt(Nt,x)))),g=w.some(k=>k.closed)}else y=[ae(d.getAttribute("points")??"").map(w=>l(dt(w,x)))],g=d.tagName==="polygon";const b=y[0]??[];return{id:`region-${f+1}`,name:d.getAttribute("id")||`${d.tagName}-${f+1}`,sourceType:d.tagName,points:b,contours:y,closed:g,stitchType:g?"fill":"run",color:d.getAttribute("fill")||d.getAttribute("stroke")||"#1f6feb",params:{spacing:.8,angle:45,runWidth:1.2,satinWidth:3,maxSatinWidth:8}}}).filter(d=>d.contours.some(f=>f.length>=2))}const ut="/export/pes",de=["http://127.0.0.1:8000/export/pes","http://localhost:8000/export/pes"],bt=document.querySelector("#app");if(!bt)throw new Error("App root not found");const u={designs:[],baseRegions:[],regions:[],selectedRegionId:null,stitches:[],threads:[],scaleFactor:1,viewport:{scale:8,offsetX:80,offsetY:80},viewMode:"design"};bt.innerHTML=`
+  <div class="app-shell">
+    <aside class="panel">
+      <header class="brand-header">
+        <h1 class="brand-wordmark"><span class="word-open">Open</span> <span class="word-stitch">Stitch</span></h1>
+        <p class="brand-tagline">Design to stitch in seconds</p>
+      </header>
+      
+      <div class="panel-content">
+        <!-- 1. Import Phase -->
+        <section class="phase-section">
+          <h2 class="phase-header">1. Import</h2>
+          <div id="drop-zone" class="drop-zone">
+            <div class="drop-zone-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <strong>Click or drag SVG files here</strong>
+            <p class="hint" style="margin: 4px 0 0;">Supports standard vector paths.</p>
+            <input id="svg-upload" type="file" accept=".svg,image/svg+xml" multiple />
+          </div>
+          <button id="load-sample" class="secondary" style="width:100%">Load Sample Pattern</button>
+          <div id="design-list"></div>
+        </section>
+
+        <!-- 2. Configure Phase -->
+        <section class="phase-section">
+          <h2 class="phase-header">2. Configure</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Bulk apply type:</span>
+            <select id="bulk-stitch-type" style="width: auto; padding: 6px 12px; font-size: 13px;">
+              <option value="">-- select --</option>
+              <option value="fill">Fill</option>
+              <option value="satin">Satin</option>
+              <option value="run">Run</option>
+            </select>
+          </div>
+          <div id="region-list"></div>
+        </section>
+
+        <!-- 3. Preview Stats -->
+        <section class="phase-section">
+          <h2 class="phase-header">3. Preview Stats</h2>
+          <div class="stats-strip">
+            <div class="stat-item">
+              <strong id="stat-stitches">0</strong>
+              <span class="meta">Stitches</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stat-item">
+              <strong id="stat-colors">0</strong>
+              <span class="meta">Threads</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stat-item">
+              <strong><span id="stat-width">0</span> × <span id="stat-height">0</span></strong>
+              <span class="meta">Size (mm)</span>
+            </div>
+          </div>
+          <div class="size-config">
+            <label>
+              <div class="label-header"><span>Target Width</span></div>
+              <input id="size-width" type="number" min="1" step="1" placeholder="mm" />
+            </label>
+            <label>
+              <div class="label-header"><span>Target Height</span></div>
+              <input id="size-height" type="number" min="1" step="1" placeholder="mm" />
+            </label>
+          </div>
+        </section>
+
+        <!-- 4. Export Phase -->
+        <section class="phase-section" style="margin-top:auto">
+          <h2 class="phase-header">4. Export</h2>
+          <div class="export-card">
+            <div class="export-actions">
+              <button id="export-pes" class="primary">Export PES</button>
+              <button id="export-dst" class="secondary">Export DST</button>
+            </div>
+            <p class="hint" style="text-align:center; margin:0">PES export uses local Python backend.</p>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="canvas-panel">
+      <div class="canvas-toolbar">
+        <div class="toggle-group">
+          <button id="view-design" class="toggle-btn active">Design View</button>
+          <button id="view-stitch" class="toggle-btn">Stitch View</button>
+        </div>
+        <div style="display:flex; gap: 8px;">
+          <button id="rebuild" class="icon-btn" title="Refresh/Rebuild">
+             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+          <div class="zoom-controls">
+            <button id="zoom-in" class="zoom-btn">+</button>
+            <button id="reset-view" class="zoom-btn" title="Reset View">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            </button>
+            <button id="zoom-out" class="zoom-btn">-</button>
+          </div>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="preview"></canvas>
+      </div>
+    </main>
+  </div>
+`;const G=document.querySelector("#region-list"),H=document.querySelector("#design-list"),S=document.querySelector("#preview"),j=document.querySelector("#svg-upload"),I=document.querySelector("#drop-zone"),ue=document.querySelector("#load-sample"),he=document.querySelector("#rebuild"),pe=document.querySelector("#export-dst"),me=document.querySelector("#export-pes"),ht=document.querySelector("#bulk-stitch-type"),Z=document.querySelector("#view-design"),J=document.querySelector("#view-stitch"),fe=document.querySelector("#stat-stitches"),ye=document.querySelector("#stat-colors"),ge=document.querySelector("#stat-width"),xe=document.querySelector("#stat-height"),Q=document.querySelector("#size-width"),K=document.querySelector("#size-height");function et(t){return t.map(e=>({...e,points:e.points.map(s=>({...s})),contours:e.contours.map(s=>s.map(o=>({...o}))),params:{...e.params}}))}function ve(){return`design-${crypto.randomUUID()}`}function be(t,e,s){return t.map((o,n)=>({...o,id:`${e}-region-${n+1}`,designId:e,designName:s}))}function q(t){const e=t.flatMap(o=>o.contours);if(e.length===0)return{minX:0,minY:0,maxX:0,maxY:0,width:0,height:0};const s=tt(e);return{...s,width:s.maxX-s.minX,height:s.maxY-s.minY}}function St(t,e){const s=q(t),o=n=>({x:s.minX+(n.x-s.minX)*e,y:s.minY+(n.y-s.minY)*e});return t.map(n=>({...n,points:n.points.map(o),contours:n.contours.map(i=>i.map(o)),params:{...n.params,spacing:Math.max(.3,n.params.spacing*e),runWidth:Math.max(.4,n.params.runWidth*e),satinWidth:Math.max(.8,n.params.satinWidth*e)}}))}function wt(t){u.scaleFactor=t,u.regions=St(et(u.baseRegions),t),L(),F(),E()}function F(){if(H.innerHTML="",u.designs.length===0){H.innerHTML='<p class="hint">No files imported yet.</p>';return}u.designs.forEach(t=>{const e=u.regions.filter(o=>o.designId===t.id).length,s=document.createElement("div");s.className="design-card",s.innerHTML=`
+      <div>
+        <strong>${t.name}</strong>
+        <div class="meta">${e} region${e===1?"":"s"}</div>
+      </div>
+      <button class="danger" type="button">Delete</button>
+    `,s.querySelector("button").addEventListener("click",()=>{Te(t.id)}),H.appendChild(s)})}function Et(){if(!u.selectedRegionId)return;G.querySelector(`.region-card[data-region-id="${u.selectedRegionId}"]`)?.scrollIntoView({block:"nearest",behavior:"smooth"})}function Se(t){const e=S.getBoundingClientRect();return{x:(t.clientX-e.left-u.viewport.offsetX)/u.viewport.scale,y:(t.clientY-e.top-u.viewport.offsetY)/u.viewport.scale}}function we(t,e,s){const o=s.x-e.x,n=s.y-e.y;if(o===0&&n===0)return C(t,e);const i=Math.max(0,Math.min(1,((t.x-e.x)*o+(t.y-e.y)*n)/(o*o+n*n)));return C(t,{x:e.x+o*i,y:e.y+n*i})}function Ee(t){for(let e=u.regions.length-1;e>=0;e-=1){const s=u.regions[e];if(s.closed&&pt(t,s.contours)||!s.closed&&s.contours.some(n=>n.some((i,r)=>r===0?!1:we(t,n[r-1],i)<=1.5)))return s.id}return null}function Mt(){const t=window.devicePixelRatio||1,e=S.getBoundingClientRect();S.width=e.width*t,S.height=e.height*t;const s=S.getContext("2d");s&&s.setTransform(t,0,0,t,0,0),_()}function Me(){const t=q(u.regions);fe.textContent=String(u.stitches.filter(e=>e.cmd==="stitch").length.toLocaleString()),ye.textContent=String(u.threads.length),ge.textContent=t.width.toFixed(1),xe.textContent=t.height.toFixed(1),Q.value=t.width>0?t.width.toFixed(1):"",K.value=t.height>0?t.height.toFixed(1):""}function L(){const t=te(u.regions);u.stitches=t.stitches,u.threads=t.threads,Me(),M()}function M(){ne(S,u.regions,u.stitches,u.threads,u.selectedRegionId,u.viewport,u.viewMode)}function E(){G.innerHTML="";for(const t of u.regions){const e=t.stitchType==="fill",s=t.stitchType==="satin",o=t.stitchType==="run",n=document.createElement("div");n.className=`region-card${t.id===u.selectedRegionId?" selected":""}`,n.dataset.regionId=t.id,n.innerHTML=`
+      <div class="region-header">
+        <div class="region-title">
+          <div class="swatch" style="background:${t.color}"></div>
+          <div>
+            <h3>${t.name}</h3>
+            ${t.designName?`<div class="meta">${t.designName}</div>`:""}
+          </div>
+        </div>
+        <span class="badge">${t.closed?"Path":"Polyl."}</span>
+      </div>
+      <div class="region-params">
+        <label>
+          <div class="label-header"><span>Stitch type</span></div>
+          <select data-field="stitchType">
+            <option value="fill" ${t.stitchType==="fill"?"selected":""}>Fill</option>
+            <option value="satin" ${t.stitchType==="satin"?"selected":""}>Satin</option>
+            <option value="run" ${t.stitchType==="run"?"selected":""}>Run</option>
+          </select>
+        </label>
+        ${e||s?`
+        <label>
+          <div class="label-header"><span>Spacing</span> <span class="label-value">${t.params.spacing.toFixed(1)} mm</span></div>
+          <input data-field="spacing" type="range" min="0.3" max="3" step="0.1" value="${t.params.spacing}" />
+        </label>
+        <label>
+          <div class="label-header"><span>Angle</span> <span class="label-value">${t.params.angle.toFixed(0)}°</span></div>
+          <input data-field="angle" type="range" min="0" max="180" step="5" value="${t.params.angle}" />
+        </label>
+        `:""}
+        ${s?`
+        <label>
+          <div class="label-header"><span>Satin width</span> <span class="label-value">${t.params.satinWidth.toFixed(1)} mm</span></div>
+          <input data-field="satinWidth" type="range" min="0.8" max="10" step="0.2" value="${t.params.satinWidth}" />
+        </label>
+        <label>
+          <div class="label-header"><span>Max satin width</span> <span class="label-value">${t.params.maxSatinWidth.toFixed(1)} mm</span></div>
+          <input data-field="maxSatinWidth" type="range" min="1" max="20" step="0.5" value="${t.params.maxSatinWidth}" />
+        </label>
+        `:""}
+        ${o?`
+        <label>
+          <div class="label-header"><span>Run thickness</span> <span class="label-value">${t.params.runWidth.toFixed(1)} mm</span></div>
+          <input data-field="runWidth" type="range" min="0.4" max="4" step="0.2" value="${t.params.runWidth}" />
+        </label>
+        `:""}
+      </div>
+    `,n.addEventListener("click",()=>{u.selectedRegionId=t.id,E(),M(),Et()}),n.querySelector('select[data-field="stitchType"]').addEventListener("change",i=>{t.stitchType=i.currentTarget.value,L(),E()}),n.querySelector('input[data-field="spacing"]')?.addEventListener("input",i=>{t.params.spacing=Number(i.currentTarget.value),L(),E()}),n.querySelector('input[data-field="angle"]')?.addEventListener("input",i=>{t.params.angle=Number(i.currentTarget.value),L(),E()}),n.querySelector('input[data-field="satinWidth"]')?.addEventListener("input",i=>{t.params.satinWidth=Number(i.currentTarget.value),L(),E()}),n.querySelector('input[data-field="maxSatinWidth"]')?.addEventListener("input",i=>{t.params.maxSatinWidth=Number(i.currentTarget.value),L(),E()}),n.querySelector('input[data-field="runWidth"]')?.addEventListener("input",i=>{t.params.runWidth=Number(i.currentTarget.value),L(),E()}),G.appendChild(n)}}function Tt(){u.regions=St(et(u.baseRegions),u.scaleFactor),u.selectedRegionId&&!u.regions.some(t=>t.id===u.selectedRegionId)&&(u.selectedRegionId=u.regions[0]?.id??null)}function Lt(t,e){const s=ve(),o=be(e,s,t);u.designs.push({id:s,name:t}),u.baseRegions=[...u.baseRegions,...et(o)],Tt(),u.selectedRegionId=o[0]?.id??u.selectedRegionId,F(),E(),L()}function Te(t){u.designs=u.designs.filter(e=>e.id!==t),u.baseRegions=u.baseRegions.filter(e=>e.designId!==t),Tt(),F(),E(),L()}function Le(t){const e=q(u.baseRegions);e.width<=0||t<=0||wt(t/e.width)}function Pe(t){const e=q(u.baseRegions);e.height<=0||t<=0||wt(t/e.height)}async function Pt(){const e=await(await fetch("/samples/flower.svg")).text();Lt("flower.svg",vt(e)),_()}function Rt(t,e){const s=URL.createObjectURL(t),o=document.createElement("a");o.href=s,o.download=e,o.click(),URL.revokeObjectURL(s)}async function Re(){const t=JSON.stringify({stitches:u.stitches,threads:u.threads}),e=[ut,...de.filter(o=>o!==ut)],s=[];for(const o of e)try{const n=await fetch(o,{method:"POST",headers:{"Content-Type":"application/json"},body:t});if(!n.ok){const r=await n.text();s.push(`${o}: ${r||n.statusText||"request failed"}`);continue}const i=await n.blob();Rt(i,"pattern.pes");return}catch(n){s.push(`${o}: ${n instanceof Error?n.message:"network error"}`)}throw new Error(["PES export could not reach the Python exporter.","Start it with: source .venv/bin/activate && python backend/server.py",s.length>0?`Tried: ${s.join(" | ")}`:""].filter(Boolean).join(`
+`))}async function Ct(t){if(t.length!==0){for(const e of t)if(e.name.toLowerCase().endsWith(".svg"))try{const s=await e.text();Lt(e.name,vt(s))}catch(s){console.warn("Failed to load SVG",e.name,s)}_()}}j.addEventListener("change",async()=>{const t=Array.from(j.files??[]);await Ct(t),j.value=""});["dragenter","dragover","dragleave","drop"].forEach(t=>{I.addEventListener(t,e=>{e.preventDefault(),e.stopPropagation()})});["dragenter","dragover"].forEach(t=>{I.addEventListener(t,()=>{I.classList.add("drag-active")})});["dragleave","drop"].forEach(t=>{I.addEventListener(t,()=>{I.classList.remove("drag-active")})});I.addEventListener("drop",async t=>{const e=Array.from(t.dataTransfer?.files||[]);await Ct(e)});ue.addEventListener("click",()=>{Pt()});he.addEventListener("click",L);pe.addEventListener("click",()=>{Rt(It(u.stitches),"pattern.dst")});me.addEventListener("click",()=>{Re().catch(t=>{window.alert(t instanceof Error?t.message:"PES export failed")})});Z.addEventListener("click",()=>{u.viewMode="design",Z.classList.add("active"),J.classList.remove("active"),M()});J.addEventListener("click",()=>{u.viewMode="stitch",J.classList.add("active"),Z.classList.remove("active"),M()});ht.addEventListener("change",t=>{const e=t.currentTarget.value;e&&(u.regions.forEach(s=>{s.stitchType=e}),ht.value="",L(),E())});Q.addEventListener("change",()=>{Le(Number(Q.value))});K.addEventListener("change",()=>{Pe(Number(K.value))});function _(){const t=q(u.regions);if(t.width<=0||t.height<=0||!Number.isFinite(t.width)||!Number.isFinite(t.height)){M();return}const e=40,s=S.getBoundingClientRect(),o=s.width-e*2,n=s.height-e*2;if(o<=0||n<=0){M();return}const i=o/t.width,r=n/t.height,a=Math.min(i,Math.min(r,20)),h=t.minX+t.width/2,m=t.minY+t.height/2,c=s.width/2-h*a,l=s.height/2-m*a;u.viewport={scale:Math.max(a,.01),offsetX:c,offsetY:l},M()}document.querySelector("#zoom-in").addEventListener("click",()=>{u.viewport.scale*=1.2,M()});document.querySelector("#zoom-out").addEventListener("click",()=>{u.viewport.scale/=1.2,M()});document.querySelector("#reset-view").addEventListener("click",()=>{_()});let O=!1,N=null,X={x:0,y:0};S.addEventListener("pointerdown",t=>{O=!0,X={x:t.clientX,y:t.clientY},N={x:t.clientX,y:t.clientY},S.setPointerCapture(t.pointerId)});S.addEventListener("pointermove",t=>{O&&(u.viewport.offsetX+=t.clientX-X.x,u.viewport.offsetY+=t.clientY-X.y,X={x:t.clientX,y:t.clientY},M())});S.addEventListener("pointerup",t=>{if(N&&Math.hypot(t.clientX-N.x,t.clientY-N.y)<6){const e=Ee(Se(t));e&&(u.selectedRegionId=e,E(),M(),Et())}O=!1,N=null});S.addEventListener("pointerleave",()=>{O=!1,N=null});S.addEventListener("wheel",t=>{t.preventDefault();const e=t.deltaY<0?1.08:.92;u.viewport.scale*=e,M()});window.addEventListener("resize",Mt);Mt();F();Pt();
