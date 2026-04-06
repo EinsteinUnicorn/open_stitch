@@ -554,8 +554,8 @@ async function exportPes() {
 
   throw new Error(
     [
-      "PES export could not reach the Python exporter.",
-      "Start it with: source .venv/bin/activate && python backend/server.py",
+      "PES export could not reach the Python exporter.\n" +
+      "Start it with: source .venv/bin/activate && python api/export.py",
       failures.length > 0 ? `Tried: ${failures.join(" | ")}` : "",
     ]
       .filter(Boolean)
